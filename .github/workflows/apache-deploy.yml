@@ -9,17 +9,29 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      APACHE_TARGET_DIR: ${{ secrets.APACHE_TARGET_DIR || '/var/www/html' }}
+      SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload public site artifact
-        uses: actions/upload-pages-artifact@v1
+      - name: Deploy site files to Apache server
+        uses: appleboy/scp-action@v0.1.8
         with:
-          path: public-html
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ env.SSH_PORT }}
+          source: "public-html/*"
+          target: "${{ env.APACHE_TARGET_DIR }}"
 
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v1
+      - name: Restart Apache on remote server
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ env.SSH_PORT }}
+          script: |
+            sudo systemctl restart apache2 || sudo service apache2 restart || true
