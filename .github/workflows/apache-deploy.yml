@@ -1,37 +1,29 @@
-name: Deploy Apache Site
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      APACHE_TARGET_DIR: ${{ secrets.APACHE_TARGET_DIR || '/var/www/html' }}
-      SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy site files to Apache server
-        uses: appleboy/scp-action@v0.1.8
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ env.SSH_PORT }}
-          source: "public-html/*"
-          target: "${{ env.APACHE_TARGET_DIR }}"
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
-      - name: Restart Apache on remote server
-        uses: appleboy/ssh-action@v0.1.8
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ env.SSH_PORT }}
-          script: |
-            sudo systemctl restart apache2 || sudo service apache2 restart || true
+          path: ./public-html
+
+      - name: Deploy
+        uses: actions/deploy-pages@v4
